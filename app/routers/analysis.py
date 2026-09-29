@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
-from app.services.statistics import compute_fasta_stats
+from app.services.statistics import compute_sequence_stats
 
 
 logger = logging.getLogger("bioinformatics")
@@ -37,6 +37,26 @@ def analyze_file(
             detail=f"File '{filename}' tidak ditemukan"
         )
 
+    # Tentukan format berdasarkan ekstensi file
+    extension = file_path.suffix.lower()
+
+    if extension in [".fasta", ".fa"]:
+        file_format = "fasta"
+
+    elif extension in [".fastq", ".fq"]:
+        file_format = "fastq"
+
+    else:
+        logger.error(
+            "Unsupported sequence format: %s",
+            extension
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail="Format file harus FASTA atau FASTQ"
+        )
+
     # Cek format output
     if output_format not in ["json", "tsv"]:
         logger.error(
@@ -50,7 +70,10 @@ def analyze_file(
         )
 
     try:
-        stats = compute_fasta_stats(file_path)
+        stats = compute_sequence_stats(
+            file_path,
+            file_format
+        )
 
     except ValueError as error:
         logger.error(
@@ -72,17 +95,19 @@ def analyze_file(
     if output_format == "json":
         return {
             "filename": filename,
+            "format": file_format,
             **stats
         }
 
     # TSV
     tsv = (
-        "filename\tsequences\ttotal_length\tmin_length\t"
-        "max_length\tmean_length\tgc_percent\n"
+        "filename\tformat\tsequences\ttotal_length\t"
+        "min_length\tmax_length\tmean_length\tgc_percent\n"
     )
 
     tsv += (
         f"{filename}\t"
+        f"{file_format}\t"
         f"{stats['sequences']}\t"
         f"{stats['total_length']}\t"
         f"{stats['min_length']}\t"

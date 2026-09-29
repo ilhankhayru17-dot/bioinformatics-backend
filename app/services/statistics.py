@@ -1,12 +1,20 @@
 from pathlib import Path
-
 from Bio import SeqIO
 
 
-def compute_fasta_stats(file_path: Path) -> dict:
+def compute_sequence_stats(file_path: Path, file_format: str) -> dict:
+    """
+    Menghitung statistik sequence dari file FASTA atau FASTQ.
+    """
+
+    file_format = file_format.lower()
+
+    if file_format not in {"fasta", "fastq"}:
+        raise ValueError("Format sequence harus FASTA atau FASTQ")
+
     sequences = []
 
-    for record in SeqIO.parse(file_path, "fasta"):
+    for record in SeqIO.parse(file_path, file_format):
         sequence = str(record.seq).upper()
 
         if sequence:
